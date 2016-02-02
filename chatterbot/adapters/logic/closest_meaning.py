@@ -1,34 +1,19 @@
 from chatterbot.adapters.exceptions import EmptyDatasetException
 from .base_match import BaseMatchAdapter
 
-from nltk.corpus import wordnet
-from nltk.corpus import stopwords
-from nltk import word_tokenize
+from chatterbot.utils.pos_tagger import POSTagger
+from chatterbot.utils.stop_words import StopWordsManager
+from chatterbot.utils.word_net import Wordnet
 
 
 class ClosestMeaningAdapter(BaseMatchAdapter):
 
     def __init__(self, **kwargs):
         super(ClosestMeaningAdapter, self).__init__(**kwargs)
-        from nltk.data import find
-        from nltk import download
 
-        # Download data if needed
-
-        try:
-            find('wordnet.zip')
-        except LookupError:
-            download('wordnet')
-
-        try:
-            find('stopwords.zip')
-        except LookupError:
-            download('stopwords')
-
-        try:
-            find('punkt.zip')
-        except LookupError:
-            download('punkt')
+        self.wordnet = Wordnet()
+        self.tagger = POSTagger()
+        self.stopwords = StopWordsManager()
 
     def get_tokens(self, text, exclude_stop_words=True):
         """
@@ -38,11 +23,11 @@ class ClosestMeaningAdapter(BaseMatchAdapter):
         is True.
         """
         lower = text.lower()
-        tokens = word_tokenize(lower)
+        tokens = self.tagger.tokenize(lower)
 
         # Remove any stop words from the string
         if exclude_stop_words:
-            excluded_words = stopwords.words("english")
+            excluded_words = self.stopwords.words("english")
 
             tokens = set(tokens) - set(excluded_words)
 
@@ -64,15 +49,15 @@ class ClosestMeaningAdapter(BaseMatchAdapter):
         # Get the highest matching value for each possible combination of words
         for combination in itertools.product(*[tokens1, tokens2]):
 
-            synset1 = wordnet.synsets(combination[0])
-            synset2 = wordnet.synsets(combination[1])
+            synset1 = self.wordnet.synsets(combination[0])
+            synset2 = self.wordnet.synsets(combination[1])
 
             if synset1 and synset2:
 
                 # Compare the first synset in each list of synsets
                 similarity = synset1[0].path_similarity(synset2[0])
 
-                if similarity:  
+                if similarity:
                     total_similarity = total_similarity + similarity
 
         return total_similarity
@@ -114,7 +99,11 @@ class ClosestMeaningAdapter(BaseMatchAdapter):
                 closest_similarity = similarity
                 closest_statement = statement
 
-        confidence = closest_similarity / total_similarity
+        try:
+            confidence = closest_similarity / total_similarity
+        except:
+            confidence = 0
 
-        return confidence, next((s for s in statement_list if s.text == closest_statement), None)
-
+        return confidence, next(
+            (s for s in statement_list if s.text == closest_statement), None
+        )

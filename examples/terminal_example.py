@@ -4,8 +4,14 @@ from chatterbot import ChatBot
 # Create a new instance of a ChatBot
 bot = ChatBot("Terminal",
     storage_adapter="chatterbot.adapters.storage.JsonDatabaseAdapter",
-    logic_adapter="chatterbot.adapters.logic.ClosestMatchAdapter",
-    io_adapter="chatterbot.adapters.io.TerminalAdapter",
+    logic_adapters=[
+        "chatterbot.adapters.logic.EvaluateMathematically",
+        "chatterbot.adapters.logic.TimeLogicAdapter",
+        "chatterbot.adapters.logic.ClosestMatchAdapter"
+    ],
+    io_adapters=[
+        "chatterbot.adapters.io.TerminalAdapter"
+    ],
     database="../database.db")
 
 user_input = "Type something to begin..."
